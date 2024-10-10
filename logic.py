@@ -19,7 +19,6 @@ import traceback
 import pyaes
 
 def is_debug(tab):
-    # tab._stdout.println("Is Debug?: {}".format(DEBUG))
     return DEBUG
 
 
@@ -64,22 +63,30 @@ def set_not_encrypted_text(tab, content, isRequest):
 
 
 def is_text_modified(tab):
-    if is_debug(tab):
-        tab._stdout.println("Edited?: {}".format(tab._txtInput.isTextModified()))
-
     return tab._txtInput.isTextModified()
 
 
 def build_request(tab):
-    #raw data, no json
-    data = tab._txtInput.getText()
-    return data
+    text = tab._txtInput.getText()
+    new_body = encrypt_data(text)
+    #build new message
+    info, body = extract_info(tab, tab._originalMessage, tab._isRequest)
+    headers = info.getHeaders()
+    tab._currentMessage = tab._helpers.buildHttpMessage(headers, new_body)
+    return tab._currentMessage
 
 
 def build_response(tab):
-    #raw data, no json
-    data = tab._txtInput.getText()
-    return data
+    text = tab._txtInput.getText()
+    text = text.tostring()
+    #text is response (with header and body) split it to take only body
+    text = text.split("\r\n\r\n", 1)[1]
+    new_body = encrypt_data(text)
+    #build new message
+    info, body = extract_info(tab, tab._originalMessage, tab._isRequest)
+    headers = info.getHeaders()
+    tab._currentMessage = tab._helpers.buildHttpMessage(headers, new_body)
+    return tab._currentMessage
 
 # ENCRYPT / DECRYPT
 
@@ -94,9 +101,8 @@ def decrypt_data(encrypted_data):
 
 def encrypt_data(plaintext):
     encrypter = pyaes.Encrypter(pyaes.AESModeOfOperationECB(b"e5ch*sfsAl8rX@H#"))
-    ciphertext = encrypter.feed(plaintext.encode('utf-8')) + encrypter.feed()
-    encrypted_data = base64.b64encode(ciphertext).decode('utf-8')
-
+    encrypted_data = encrypter.feed(plaintext) + encrypter.feed()
+    encrypted_data = base64.b64encode(encrypted_data)
     return encrypted_data
 
 # HELPERS

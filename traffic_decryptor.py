@@ -85,7 +85,7 @@ class TrafficDecryptorTab(IMessageEditorTab):
 
         # Create a text editor
         self._txtInput = extender._callbacks.createTextEditor()
-        self._txtInput.setEditable(False)
+        self._txtInput.setEditable(True)
         self._currentMessage = None
         self._originalMessage = None
         self._isRequest = None
@@ -128,9 +128,17 @@ class TrafficDecryptorTab(IMessageEditorTab):
                 traceback.print_exc(file=self._stdout)
 
     def getMessage(self):
-        # If the custom tab was modified, re-encode the data field before returning the message
-
-        # Return the possibly modified message
+        if logic.is_text_modified(self):
+            try:
+                if self._isRequest:
+                    message = logic.build_request(self)
+                else:
+                    message = logic.build_response(self)
+                return message
+            except Exception as e:
+                logic.set_error_text(self, e)
+                if logic.is_debug(self):
+                    traceback.print_exc(file=self._stdout)
         return self._currentMessage
 
     def isModified(self):
